@@ -1,0 +1,54 @@
+version: '3.9'
+
+volumes:
+  swapi_data:
+
+networks:
+  backend:
+
+services:
+  async:
+    build: .
+    environment:
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_HOST: ${PG_HOST}
+      PG_PORT: ${PG_PORT}
+      PG_DB: ${PG_DB}
+    depends_on:
+      postgresql_db:
+        condition: service_healthy
+    networks:
+      - backend
+
+  postgresql_db:
+    image: 'postgres:12-alpine'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+    volumes:
+      - swapi_data:/var/lib/postgresql/data
+    networks:
+      - backend
+      
+
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PG_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PG_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgresql_db
+    networks:
+      - backend
